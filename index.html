@@ -895,7 +895,7 @@ footer span{color:var(--red)}
 
       <article class="media-card reveal">
         <div class="media-thumb youtube-thumb">
-          <img src="https://i.ytimg.com/vi/IkD49du0dLM/maxresdefault.jpg"
+          <img id="latestYoutubeThumb" src="https://i.ytimg.com/vi/IkD49du0dLM/maxresdefault.jpg"
                alt="صورة آخر فيديو على YouTube"
                loading="lazy"
                onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/IkD49du0dLM/hqdefault.jpg'">
@@ -905,7 +905,7 @@ footer span{color:var(--red)}
         </div>
         <div class="media-body">
           <div class="media-label">YouTube</div>
-          <h3>آخر فيديو</h3>
+          <h3 id="latestYoutubeTitle">آخر فيديو</h3>
           <p>هذا هو الفيديو الأخير على YouTube؛ الضغط على الصورة يفتح الفيديو مباشرة على YouTube.</p>
           <a class="btn btn-ghost" href="https://www.youtube.com/watch?v=IkD49du0dLM" target="_blank" rel="noopener">مشاهدة الفيديو ↗</a>
         </div>
@@ -1113,6 +1113,57 @@ footer span{color:var(--red)}
       }
     });
   });
+
+  // تحديث آخر فيديو من قناة YouTube تلقائياً.
+  // Channel ID لقناة Musab | مصعب:
+  // UC8GReenjc0yBlP-5vr_y4kw
+  const YOUTUBE_CHANNEL_ID = "UC8GReenjc0yBlP-5vr_y4kw";
+  const YOUTUBE_RSS =
+    "https://www.youtube.com/feeds/videos.xml?channel_id=" + YOUTUBE_CHANNEL_ID;
+  const YOUTUBE_PROXY =
+    "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(YOUTUBE_RSS);
+
+  async function updateLatestYouTube() {
+    const thumb = document.getElementById("latestYoutubeThumb");
+    const title = document.getElementById("latestYoutubeTitle");
+    const meta = document.getElementById("latestYoutubeMeta");
+    const button = document.getElementById("latestYoutubeButton");
+    if (!thumb || !title || !meta || !button) return;
+
+    try {
+      const response = await fetch(YOUTUBE_PROXY, {cache:"no-store"});
+      if (!response.ok) throw new Error("YouTube RSS unavailable");
+
+      const data = await response.json();
+      const item = data?.items?.[0];
+      if (!item?.link) throw new Error("No latest video");
+
+      const match = item.link.match(/[?&]v=([^&]+)/);
+      const videoId = match ? match[1] : null;
+      if (!videoId) throw new Error("No video ID");
+
+      thumb.src = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+      thumb.alt = item.title || "آخر فيديو على YouTube";
+      title.textContent = item.title || "آخر فيديو";
+      button.href = item.link;
+
+      const date = item.pubDate
+        ? new Date(item.pubDate).toLocaleDateString("ar-SA", {
+            year:"numeric", month:"long", day:"numeric"
+          })
+        : "";
+      meta.textContent = date
+        ? `آخر فيديو على YouTube • ${date}`
+        : "آخر فيديو منشور على قناة iMonkey_D";
+    } catch (error) {
+      console.warn("تعذر تحديث آخر فيديو من YouTube:", error);
+      // يبقى الفيديو الحالي كخطة احتياطية.
+    }
+  }
+
+  updateLatestYouTube();
+  setInterval(updateLatestYouTube, 15 * 60 * 1000);
+
 </script>
 </body>
 </html>
